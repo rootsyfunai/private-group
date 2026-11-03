@@ -28,9 +28,11 @@ export async function initializeDatabase(): Promise<void> {
     CREATE TABLE IF NOT EXISTS referrals (
       referred_user_id BIGINT PRIMARY KEY,
       referrer_user_id BIGINT NOT NULL,
+      bonus_claimed BOOLEAN NOT NULL DEFAULT FALSE,
       rewarded BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    ALTER TABLE referrals ADD COLUMN IF NOT EXISTS bonus_claimed BOOLEAN NOT NULL DEFAULT FALSE;
   `);
 }
 
@@ -100,8 +102,8 @@ export async function claimReferralReward(referredUserId: number): Promise<numbe
 
 export async function claimReferralBonus(referredUserId: number): Promise<boolean> {
   const result = await pool.query(
-    `UPDATE referrals SET rewarded = TRUE
-     WHERE referred_user_id = $1 AND rewarded = FALSE`,
+    `UPDATE referrals SET bonus_claimed = TRUE
+     WHERE referred_user_id = $1 AND bonus_claimed = FALSE`,
     [referredUserId],
   );
   return result.rowCount === 1;

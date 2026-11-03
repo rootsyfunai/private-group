@@ -5,6 +5,7 @@ import { verifyUsdtPayment } from "./bsc.js";
 import {
   activeMembership,
   claimReferralBonus,
+  claimReferralReward,
   expiredMemberships,
   expiredPreviews,
   initializeDatabase,
@@ -66,13 +67,13 @@ bot.command("start", async (context) => {
     if (Number.isInteger(referrerId) && (await recordReferral(userId, referrerId))) {
       await notifyAdmin(`[Referral] ${userLabel(context)} was referred by ${referrerId}.`);
       if (await claimReferralBonus(userId)) {
-        const expiresAt = await upsertMembership(userId, config.referralRewardDays);
+        const expiresAt = await upsertMembership(userId, config.referralBonusDays);
         await context.reply(
-          `Welcome! You received ${config.referralRewardDays} free days of access. ` +
+          `Welcome! You received ${config.referralBonusDays} free days of access. ` +
             `Your access expires ${expiresAt.toISOString()}. Request to join the private group now.`,
         );
         await notifyAdmin(
-          `[Referral] User ${userId} received ${config.referralRewardDays} free days from referrer ${referrerId}.`,
+          `[Referral] User ${userId} received ${config.referralBonusDays} free days from referrer ${referrerId}.`,
         );
       }
     }
@@ -81,7 +82,8 @@ bot.command("start", async (context) => {
   const referralLink = `https://t.me/${botInfo.username}?start=ref_${userId}`;
   await context.reply(
     `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.\n\n` +
-      `Share your referral link and friends get ${config.referralRewardDays} free days:\n${referralLink}\n\n` +
+      `Share your referral link. Friends get ${config.referralBonusDays} free days, ` +
+      `and you earn ${config.referralRewardDays} free days when they pay:\n${referralLink}\n\n` +
       "Use the buttons below.",
     {
       reply_markup: new InlineKeyboard()
@@ -103,9 +105,10 @@ bot.callbackQuery("refer", async (context) => {
   const link = `https://t.me/${botInfo.username}?start=ref_${userId}`;
   const count = await referralCount(userId);
   await context.reply(
-    `Share this link. Friends who join through it get ${config.referralRewardDays} free days.\n\n` +
+    `Share this link. Friends get ${config.referralBonusDays} free days, ` +
+      `and you earn ${config.referralRewardDays} free days when they pay.\n\n` +
       `Your link:\n${link}\n\n` +
-      `Friends who used your link: ${count}`,
+      `Successful referrals: ${count}`,
   );
 });
 
@@ -115,9 +118,10 @@ bot.command("refer", async (context) => {
   const link = `https://t.me/${botInfo.username}?start=ref_${userId}`;
   const count = await referralCount(userId);
   await context.reply(
-    `Share this link. Friends who join through it get ${config.referralRewardDays} free days.\n\n` +
+    `Share this link. Friends get ${config.referralBonusDays} free days, ` +
+      `and you earn ${config.referralRewardDays} free days when they pay.\n\n` +
       `Your link:\n${link}\n\n` +
-      `Friends who used your link: ${count}`,
+      `Successful referrals: ${count}`,
   );
 });
 
@@ -155,9 +159,10 @@ bot.hears("Refer & earn", async (context) => {
   const link = `https://t.me/${botInfo.username}?start=ref_${userId}`;
   const count = await referralCount(userId);
   await context.reply(
-    `Share this link. Friends who join through it get ${config.referralRewardDays} free days.\n\n` +
+    `Share this link. Friends get ${config.referralBonusDays} free days, ` +
+      `and you earn ${config.referralRewardDays} free days when they pay.\n\n` +
       `Your link:\n${link}\n\n` +
-      `Friends who used your link: ${count}`,
+      `Successful referrals: ${count}`,
   );
 });
 
@@ -288,6 +293,18 @@ bot.on("message:text", async (context) => {
   );
   await notifyAdmin(
     `New purchase: user ${userId}, ${config.priceUsdt} USDT, tx ${txHash}, expires ${expiresAt.toISOString()}.`,
+  );
+
+  const referrerId = await claimReferralReward(userId);
+  if (!referrerId) return;
+  const referrerExpiry = await upsertMembership(referrerId, config.referralRewardDays);
+  await bot.api.sendMessage(
+    referrerId,
+    `You earned ${config.referralRewardDays} free days because your referral paid. ` +
+      `Your access now expires ${referrerExpiry.toISOString()}.`,
+  );
+  await notifyAdmin(
+    `[Referral] User ${referrerId} earned ${config.referralRewardDays} days from user ${userId}'s payment.`,
   );
 });
 
