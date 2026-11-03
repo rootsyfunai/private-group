@@ -70,7 +70,6 @@ bot.command("start", async (context) => {
       }
     }
   }
-  await context.reply("Keyboard removed.", { reply_markup: { remove_keyboard: true } });
   await context.reply(
     `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.`,
     {
