@@ -1,4 +1,4 @@
-import { Bot, InlineKeyboard, InputFile } from "grammy";
+import { Bot, InlineKeyboard, InputFile, Keyboard } from "grammy";
 import { createServer } from "node:http";
 import { config } from "./config.js";
 import { verifyUsdtPayment } from "./bsc.js";
@@ -18,6 +18,14 @@ const bot = new Bot(config.botToken);
 const txHashPattern = /^0x[0-9a-fA-F]{64}$/;
 const awaitingAdminMessage = new Set<number>();
 
+const mainKeyboard = new Keyboard()
+  .text("Buy access")
+  .text("Free preview")
+  .row()
+  .text("Contact admin")
+  .resized()
+  .persistent();
+
 bot.command(["start", "buy"], async (context) => {
   await context.reply(
     `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.`,
@@ -29,6 +37,24 @@ bot.command(["start", "buy"], async (context) => {
         .text("Contact admin", "contact_admin"),
     },
   );
+  await context.reply("Use the buttons below.", { reply_markup: mainKeyboard });
+});
+
+bot.hears("Buy access", async (context) => {
+  await context.reply("Tap the button below to get the payment details.", {
+    reply_markup: new InlineKeyboard().text("Buy access", "buy_access"),
+  });
+});
+
+bot.hears("Free preview", async (context) => {
+  await context.reply("Tap the button below to start your preview.", {
+    reply_markup: new InlineKeyboard().text("Free preview", "preview"),
+  });
+});
+
+bot.hears("Contact admin", async (context) => {
+  awaitingAdminMessage.add(context.from!.id);
+  await context.reply("Send your message for the admin. Use /cancel to stop.");
 });
 
 bot.callbackQuery("preview", async (context) => {
