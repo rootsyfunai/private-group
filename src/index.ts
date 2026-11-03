@@ -208,15 +208,11 @@ bot.callbackQuery("buy_access", async (context) => {
   await context.replyWithPhoto(new InputFile(config.qrImagePath), {
     caption:
       `Send exactly ${config.priceUsdt} USDT to:\n` +
-      "```\n" +
-      `${config.walletAddress}\n` +
-      "```\n" +
+      `\`${config.walletAddress}\`\n\n` +
       "You can open your Binance app and scan the QR code. Confirm it is set to USDT " +
       "before paying.\n\n" +
       "After sending, reply with the transaction hash, for example:\n" +
-      "```\n" +
-      "0x4f3a1c2b9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a\n" +
-      "```",
+      "`0x4f3a1c2b9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a`",
     parse_mode: "Markdown",
   });
 });
