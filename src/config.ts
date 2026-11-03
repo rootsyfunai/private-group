@@ -16,7 +16,6 @@ export const config = {
   subscriptionDays: Number(process.env.SUBSCRIPTION_DAYS ?? "30"),
   port: Number(process.env.PORT ?? "3000"),
   walletAddress: required("USDT_WALLET_ADDRESS"),
-  bscScanApiKey: required("BSCSCAN_API_KEY"),
   qrImagePath: process.env.QR_IMAGE_PATH ?? "qrcode.jpg",
 };
 

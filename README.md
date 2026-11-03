@@ -5,8 +5,9 @@ Smart Chain (BEP20). It stores memberships in PostgreSQL and is designed to run
 on Railway.
 
 Users scan the Binance QR, send USDT to the configured wallet, and reply with the
-transaction hash. The bot verifies the transfer through BscScan, then approves
-their join request. Members are removed when access expires.
+transaction hash. The bot verifies the transfer directly on BNB Smart Chain
+through public RPC endpoints, then approves their join request. Members are
+removed when access expires.
 
 Users can also tap **Contact admin** to send a message through the bot. The admin
 receives it with a **Reply** button; replies are delivered by the bot without
@@ -20,9 +21,8 @@ revealing the admin's Telegram account. The admin can also use
    approve join requests, ban, and unban members. Set `PRIVATE_GROUP_ID` to the
    group ID (usually starts with `-100`). Set `ADMIN_USER_ID` to the Telegram user
    ID that should receive purchase and expiry notifications.
-3. Create a free BscScan API key at <https://bscscan.com/myapikey>.
-4. Create a Railway PostgreSQL service and copy its `DATABASE_URL`.
-5. Copy `.env.example` to `.env`, fill in the values, then run:
+3. Create a Railway PostgreSQL service and copy its `DATABASE_URL`.
+4. Copy `.env.example` to `.env`, fill in the values, then run:
 
    ```sh
    npm install
@@ -38,5 +38,5 @@ hash can only be redeemed once. The QR image is read from `QR_IMAGE_PATH`
 (default `qrcode.jpg`), so it must be present in the deployed working directory.
 
 Before accepting real payments, test with a small transfer and confirm the
-BscScan verification, join approval, and expiry removal all work. Confirm local
+on-chain verification, join approval, and expiry removal all work. Confirm local
 legal, tax, consumer-protection, and cryptocurrency compliance requirements.

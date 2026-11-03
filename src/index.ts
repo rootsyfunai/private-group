@@ -1,7 +1,7 @@
 import { Bot, InlineKeyboard, InputFile } from "grammy";
 import { createServer } from "node:http";
 import { config } from "./config.js";
-import { verifyUsdtPayment } from "./bscscan.js";
+import { verifyUsdtPayment } from "./bsc.js";
 import {
   activeMembership,
   expiredMemberships,
