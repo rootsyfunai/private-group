@@ -22,10 +22,10 @@ Users can tap **Refer & earn** or use `/refer` to get a personal invite link:
 https://t.me/<bot_username>?start=ref_<user_id>
 ```
 
-When a referred user's payment is verified, the referrer earns
-`REFERRAL_REWARD_DAYS` free days (default 2). Rewards are only granted if the
-referrer has active access at that moment. Each referred user can be rewarded
-once, and self-referrals are ignored.
+A new user who starts the bot through a referral link immediately receives
+`REFERRAL_REWARD_DAYS` free days (default 2) without paying. Each user can claim
+this bonus once, and self-referrals are ignored. The referral link is shown in
+the `/start` message and via `/refer` or **Refer & earn**.
 
 The admin receives a direct message for each user action: button clicks, text
 messages, preview starts, payment attempts, join requests, and removals. Admin

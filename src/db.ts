@@ -98,6 +98,15 @@ export async function claimReferralReward(referredUserId: number): Promise<numbe
   return result.rows[0] ? Number(result.rows[0].referrer_user_id) : null;
 }
 
+export async function claimReferralBonus(referredUserId: number): Promise<boolean> {
+  const result = await pool.query(
+    `UPDATE referrals SET rewarded = TRUE
+     WHERE referred_user_id = $1 AND rewarded = FALSE`,
+    [referredUserId],
+  );
+  return result.rowCount === 1;
+}
+
 export async function referralCount(userId: number): Promise<number> {
   const result = await pool.query<{ count: string }>(
     "SELECT COUNT(*)::text AS count FROM referrals WHERE referrer_user_id = $1 AND rewarded = TRUE",
