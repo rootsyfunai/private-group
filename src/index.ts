@@ -104,7 +104,9 @@ bot.command("start", async (context) => {
 bot.callbackQuery("send_videos", async (context) => {
   await context.answerCallbackQuery();
   awaitingVideo.add(context.from!.id);
-  await context.reply("Send the video you want to share. Use /cancel to stop.");
+  await context.reply(
+    "Send the video you want to share. You can add a caption with any notes. Use /cancel to stop.",
+  );
 });
 
 bot.on("message:video", async (context) => {
@@ -116,7 +118,6 @@ bot.on("message:video", async (context) => {
     context.message.message_id,
     {
       caption: `Video from ${userLabel(context)}${context.message.caption ? `:\n\n${context.message.caption}` : ""}`,
-      reply_markup: new InlineKeyboard().text("Reply", `reply_${userId}`),
     },
   );
   await context.reply("Your video was sent to the admin.");
@@ -190,7 +191,9 @@ bot.hears("Refer & get free days", async (context) => {
 
 bot.hears("Send videos", async (context) => {
   awaitingVideo.add(context.from!.id);
-  await context.reply("Send the video you want to share. Use /cancel to stop.");
+  await context.reply(
+    "Send the video you want to share. You can add a caption with any notes. Use /cancel to stop.",
+  );
 });
 
 bot.hears("Contact admin", async (context) => {

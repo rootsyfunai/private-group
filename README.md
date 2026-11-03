@@ -35,7 +35,7 @@ messages, preview starts, payment attempts, join requests, and removals. Admin
 activity is not logged back to the admin.
 
 Users can tap **Send videos** to submit a video to the admin. The bot copies the
-video to the admin's DM with the sender's details and a **Reply** button.
+video to the admin's DM with the sender's details and any caption notes.
 
 Users can also tap **Contact admin** to send a message through the bot. The admin
 receives it with a **Reply** button; replies are delivered by the bot without
