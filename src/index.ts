@@ -1,4 +1,4 @@
-import { Bot, InlineKeyboard, InputFile, Keyboard } from "grammy";
+import { Bot, InlineKeyboard, InputFile } from "grammy";
 import { createServer } from "node:http";
 import { config } from "./config.js";
 import { verifyUsdtPayment } from "./bsc.js";
@@ -70,7 +70,7 @@ bot.command("start", async (context) => {
       }
     }
   }
-  await context.reply("Keyboard removed.", { reply_markup: new Keyboard().remove() });
+  await context.reply("Keyboard removed.", { reply_markup: { remove_keyboard: true } });
   await context.reply(
     `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.`,
     {
