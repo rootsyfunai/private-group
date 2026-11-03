@@ -81,7 +81,8 @@ bot.command("start", async (context) => {
   const referralLink = `https://t.me/${botInfo.username}?start=ref_${userId}`;
   await context.reply(
     `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.\n\n` +
-      `Share your referral link and friends get ${config.referralRewardDays} free days:\n${referralLink}`,
+      `Share your referral link and friends get ${config.referralRewardDays} free days:\n${referralLink}\n\n` +
+      "Use the buttons below.",
     {
       reply_markup: new InlineKeyboard()
         .text("Buy access", "buy_access")
@@ -90,7 +91,7 @@ bot.command("start", async (context) => {
         .text("Contact admin", "contact_admin"),
     },
   );
-  await context.reply("Use the buttons below.", { reply_markup: mainKeyboard });
+  await context.reply("Choose an option:", { reply_markup: mainKeyboard });
 });
 
 bot.command("refer", async (context) => {
@@ -116,7 +117,7 @@ bot.command("buy", async (context) => {
         .text("Contact admin", "contact_admin"),
     },
   );
-  await context.reply("Use the buttons below.", { reply_markup: mainKeyboard });
+  await context.reply("Choose an option:", { reply_markup: mainKeyboard });
 });
 
 bot.hears("Buy access", async (context) => {
@@ -329,6 +330,12 @@ async function removeExpiredPreviews(): Promise<void> {
 
 async function main(): Promise<void> {
   await initializeDatabase();
+  await bot.api.setMyCommands([
+    { command: "start", description: "Show access options" },
+    { command: "buy", description: "Buy 30-day access" },
+    { command: "refer", description: "Get your referral link" },
+    { command: "cancel", description: "Cancel the current action" },
+  ]);
   setInterval(() => removeExpiredMembers().catch(console.error), 60_000);
   setInterval(() => removeExpiredPreviews().catch(console.error), 30_000);
   await bot.start();
