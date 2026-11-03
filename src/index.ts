@@ -95,15 +95,21 @@ bot.callbackQuery("send_videos", async (context) => {
 bot.on("message:video", async (context) => {
   const userId = context.from.id;
   if (!awaitingVideo.delete(userId)) return;
-  await bot.api.copyMessage(
-    config.adminUserId,
-    context.chat.id,
-    context.message.message_id,
-    {
-      caption: `Video from ${userLabel(context)}${context.message.caption ? `:\n\n${context.message.caption}` : ""}`,
-    },
-  );
-  await context.reply("Your video was sent to the admin.");
+  try {
+    await bot.api.copyMessage(
+      config.adminUserId,
+      context.chat.id,
+      context.message.message_id,
+      {
+        caption: `Video from ${userLabel(context)}${context.message.caption ? `:\n\n${context.message.caption}` : ""}`,
+      },
+    );
+    await context.reply("Your video was sent to the admin.");
+  } catch (error) {
+    console.error("Video submission failed:", error);
+    await context.reply("Could not send the video. Please try again.");
+    await notifyAdmin(`[Video] Failed to forward a video from ${userLabel(context)}: ${String(error)}`);
+  }
 });
 
 bot.callbackQuery("refer", async (context) => {
