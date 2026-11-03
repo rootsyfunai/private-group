@@ -5,13 +5,6 @@ export const pool = new Pool({ connectionString: config.databaseUrl, ssl: { reje
 
 export async function initializeDatabase(): Promise<void> {
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS payments (
-      invoice_id TEXT PRIMARY KEY,
-      telegram_user_id BIGINT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'active',
-      paid_at TIMESTAMPTZ,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
     CREATE TABLE IF NOT EXISTS memberships (
       telegram_user_id BIGINT PRIMARY KEY,
       expires_at TIMESTAMPTZ NOT NULL,
@@ -27,23 +20,6 @@ export async function initializeDatabase(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
-}
-
-export async function recordInvoice(invoiceId: string, userId: number): Promise<void> {
-  await pool.query(
-    "INSERT INTO payments (invoice_id, telegram_user_id) VALUES ($1, $2) ON CONFLICT (invoice_id) DO NOTHING",
-    [invoiceId, userId],
-  );
-}
-
-export async function markPaid(invoiceId: string): Promise<number | null> {
-  const result = await pool.query<{ telegram_user_id: string }>(
-    `UPDATE payments SET status = 'paid', paid_at = NOW()
-     WHERE invoice_id = $1 AND status = 'active'
-     RETURNING telegram_user_id`,
-    [invoiceId],
-  );
-  return result.rows[0] ? Number(result.rows[0].telegram_user_id) : null;
 }
 
 export async function upsertMembership(userId: number, days: number): Promise<Date> {
