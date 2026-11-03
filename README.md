@@ -34,6 +34,9 @@ The admin receives a direct message for each user action: button clicks, text
 messages, preview starts, payment attempts, join requests, and removals. Admin
 activity is not logged back to the admin.
 
+Users can tap **Send videos** to submit a video to the admin. The bot copies the
+video to the admin's DM with the sender's details and a **Reply** button.
+
 Users can also tap **Contact admin** to send a message through the bot. The admin
 receives it with a **Reply** button; replies are delivered by the bot without
 revealing the admin's Telegram account. The admin can also use

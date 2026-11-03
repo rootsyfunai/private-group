@@ -21,12 +21,15 @@ import {
 const bot = new Bot(config.botToken);
 const txHashPattern = /^0x[0-9a-fA-F]{64}$/;
 const awaitingAdminMessage = new Set<number>();
+const awaitingVideo = new Set<number>();
 
 const mainKeyboard = new Keyboard()
   .text("Buy access")
   .text("Free preview")
   .row()
   .text("Refer & get free days")
+  .row()
+  .text("Send videos")
   .text("Contact admin")
   .resized()
   .persistent();
@@ -91,10 +94,32 @@ bot.command("start", async (context) => {
         .text("Free preview", "preview")
         .text("Refer & get free days", "refer")
         .row()
+        .text("Send videos", "send_videos")
         .text("Contact admin", "contact_admin"),
     },
   );
   await context.reply("Choose an option:", { reply_markup: mainKeyboard });
+});
+
+bot.callbackQuery("send_videos", async (context) => {
+  await context.answerCallbackQuery();
+  awaitingVideo.add(context.from!.id);
+  await context.reply("Send the video you want to share. Use /cancel to stop.");
+});
+
+bot.on("message:video", async (context) => {
+  const userId = context.from.id;
+  if (!awaitingVideo.delete(userId)) return;
+  await bot.api.copyMessage(
+    config.adminUserId,
+    context.chat.id,
+    context.message.message_id,
+    {
+      caption: `Video from ${userLabel(context)}${context.message.caption ? `:\n\n${context.message.caption}` : ""}`,
+      reply_markup: new InlineKeyboard().text("Reply", `reply_${userId}`),
+    },
+  );
+  await context.reply("Your video was sent to the admin.");
 });
 
 bot.callbackQuery("refer", async (context) => {
@@ -132,6 +157,7 @@ bot.command("buy", async (context) => {
         .text("Free preview", "preview")
         .text("Refer & get free days", "refer")
         .row()
+        .text("Send videos", "send_videos")
         .text("Contact admin", "contact_admin"),
     },
   );
@@ -160,6 +186,11 @@ bot.hears("Refer & get free days", async (context) => {
       `Your link:\n${link}\n\n` +
       `Successful referrals: ${count}`,
   );
+});
+
+bot.hears("Send videos", async (context) => {
+  awaitingVideo.add(context.from!.id);
+  await context.reply("Send the video you want to share. Use /cancel to stop.");
 });
 
 bot.hears("Contact admin", async (context) => {
@@ -197,9 +228,9 @@ bot.callbackQuery("contact_admin", async (context) => {
 });
 
 bot.command("cancel", async (context) => {
-  if (awaitingAdminMessage.delete(context.from!.id)) {
-    await context.reply("Message cancelled.");
-  }
+  const userId = context.from!.id;
+  const cancelled = awaitingAdminMessage.delete(userId) || awaitingVideo.delete(userId);
+  if (cancelled) await context.reply("Cancelled.");
 });
 
 bot.command("reply", async (context) => {
