@@ -26,7 +26,7 @@ const mainKeyboard = new Keyboard()
   .text("Buy access")
   .text("Free preview")
   .row()
-  .text("Refer & earn")
+  .text("Refer & get free days")
   .text("Contact admin")
   .resized()
   .persistent();
@@ -90,7 +90,7 @@ bot.command("start", async (context) => {
         .text("Buy access", "buy_access")
         .row()
         .text("Free preview", "preview")
-        .text("Refer & earn", "refer")
+        .text("Refer & get free days", "refer")
         .row()
         .text("Contact admin", "contact_admin"),
     },
@@ -133,7 +133,7 @@ bot.command("buy", async (context) => {
         .text("Buy access", "buy_access")
         .row()
         .text("Free preview", "preview")
-        .text("Refer & earn", "refer")
+        .text("Refer & get free days", "refer")
         .row()
         .text("Contact admin", "contact_admin"),
     },
@@ -153,7 +153,7 @@ bot.hears("Free preview", async (context) => {
   });
 });
 
-bot.hears("Refer & earn", async (context) => {
+bot.hears("Refer & get free days", async (context) => {
   const userId = context.from!.id;
   const botInfo = await bot.api.getMe();
   const link = `https://t.me/${botInfo.username}?start=ref_${userId}`;

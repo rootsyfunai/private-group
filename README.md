@@ -23,8 +23,8 @@ https://t.me/<bot_username>?start=ref_<user_id>
 ```
 
 A new user who starts the bot through a referral link immediately receives
-`REFERRAL_BONUS_DAYS` free days (default 2) without paying. When that referred
-user later pays, the referrer earns `REFERRAL_REWARD_DAYS` free days (default 4).
+`REFERRAL_BONUS_DAYS` free days (default 7) without paying. When that referred
+user later pays, the referrer earns `REFERRAL_REWARD_DAYS` free days (default 7).
 
 Each referred user can claim the bonus once, and each payment rewards the
 referrer once. Self-referrals are ignored. The referral link is shown in the
