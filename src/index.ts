@@ -228,21 +228,34 @@ bot.on("chat_join_request", async (context) => {
   );
 });
 
-async function removeMember(userId: number): Promise<void> {
-  await bot.api.banChatMember(config.groupId, userId);
-  await bot.api.unbanChatMember(config.groupId, userId, { only_if_banned: true });
+async function removeMember(userId: number): Promise<boolean> {
+  try {
+    const member = await bot.api.getChatMember(config.groupId, userId);
+    if (member.status === "creator" || member.status === "administrator") {
+      await notifyAdmin(`[Skip] User ${userId} is a group ${member.status}; not removed.`);
+      return false;
+    }
+    await bot.api.banChatMember(config.groupId, userId);
+    await bot.api.unbanChatMember(config.groupId, userId, { only_if_banned: true });
+    return true;
+  } catch (error) {
+    console.error(`Failed to remove user ${userId}:`, error);
+    await notifyAdmin(`[Error] Could not remove user ${userId}: ${String(error)}`);
+    return false;
+  }
 }
 
 async function removeExpiredMembers(): Promise<void> {
   for (const userId of await expiredMemberships()) {
-    await removeMember(userId);
-    await bot.api.sendMessage(config.adminUserId, `Access expired and member ${userId} was removed.`);
+    if (await removeMember(userId)) {
+      await notifyAdmin(`Access expired and member ${userId} was removed.`);
+    }
   }
 }
 
 async function removeExpiredPreviews(): Promise<void> {
   for (const userId of await expiredPreviews()) {
-    await removeMember(userId);
+    if (!(await removeMember(userId))) continue;
     await bot.api.sendMessage(
       userId,
       `Your preview has ended. Buy access for ${config.priceUsdt} USDT to rejoin.`,
