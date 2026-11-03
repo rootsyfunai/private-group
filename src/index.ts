@@ -68,6 +68,8 @@ bot.callbackQuery("buy_access", async (context) => {
     caption:
       `Send exactly ${config.priceUsdt} USDT on BNB Smart Chain (BEP20) to:\n` +
       `\`${config.walletAddress}\`\n\n` +
+      "You can open your Binance app and scan the QR code. Confirm it is set to USDT " +
+      "and the BNB Smart Chain (BEP20) network before paying.\n\n" +
       "After sending, reply with the transaction hash (0x...).",
     parse_mode: "Markdown",
   });
