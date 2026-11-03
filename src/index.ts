@@ -101,7 +101,8 @@ bot.callbackQuery("preview", async (context) => {
     expire_date: Math.floor(Date.now() / 1000) + 600,
   });
   await context.reply(
-    `Your ${config.previewMinutes}-minute preview is ready. You will be removed automatically when it ends.`,
+    `Your preview link gives access for ${config.previewMinutes} minutes only. ` +
+      "You will be removed automatically when it ends.",
     { reply_markup: new InlineKeyboard().url("Join preview", invite.invite_link) },
   );
   await notifyAdmin(`[Preview] ${userLabel(context)} started a ${config.previewMinutes}-minute preview.`);
