@@ -97,7 +97,7 @@ bot.command("start", async (context) => {
         .text("Contact admin", "contact_admin"),
     },
   );
-  await context.reply("Menu", { reply_markup: mainKeyboard });
+  await context.reply("Choose an option below.", { reply_markup: mainKeyboard });
 });
 
 bot.callbackQuery("send_videos", async (context) => {
