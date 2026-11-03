@@ -70,11 +70,8 @@ bot.command("start", async (context) => {
       }
     }
   }
-  const botInfo = await bot.api.getMe();
-  const referralLink = `https://t.me/${botInfo.username}?start=ref_${userId}`;
   await context.reply(
-    `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.\n\n` +
-      `Share your referral link and earn ${config.referralRewardDays} free days when your friend pays:\n${referralLink}`,
+    `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.`,
     {
       reply_markup: new InlineKeyboard()
         .text("Buy access", "buy_access")
