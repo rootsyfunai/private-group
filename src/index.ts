@@ -88,10 +88,25 @@ bot.command("start", async (context) => {
         .text("Buy access", "buy_access")
         .row()
         .text("Free preview", "preview")
+        .text("Refer & earn", "refer")
+        .row()
         .text("Contact admin", "contact_admin"),
     },
   );
   await context.reply("Choose an option:", { reply_markup: mainKeyboard });
+});
+
+bot.callbackQuery("refer", async (context) => {
+  await context.answerCallbackQuery();
+  const userId = context.from!.id;
+  const botInfo = await bot.api.getMe();
+  const link = `https://t.me/${botInfo.username}?start=ref_${userId}`;
+  const count = await referralCount(userId);
+  await context.reply(
+    `Share this link. Friends who join through it get ${config.referralRewardDays} free days.\n\n` +
+      `Your link:\n${link}\n\n` +
+      `Friends who used your link: ${count}`,
+  );
 });
 
 bot.command("refer", async (context) => {
@@ -114,6 +129,8 @@ bot.command("buy", async (context) => {
         .text("Buy access", "buy_access")
         .row()
         .text("Free preview", "preview")
+        .text("Refer & earn", "refer")
+        .row()
         .text("Contact admin", "contact_admin"),
     },
   );
