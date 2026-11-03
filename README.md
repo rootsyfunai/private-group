@@ -14,6 +14,10 @@ new preview only after 24 hours have passed since their last one. Preview expiry
 is stored in PostgreSQL, so restarts do not leave preview members in the group.
 Set `PREVIEW_MINUTES` to change the duration.
 
+The admin receives a direct message for each user action: button clicks, text
+messages, preview starts, payment attempts, join requests, and removals. Admin
+activity is not logged back to the admin.
+
 Users can also tap **Contact admin** to send a message through the bot. The admin
 receives it with a **Reply** button; replies are delivered by the bot without
 revealing the admin's Telegram account. The admin can also use

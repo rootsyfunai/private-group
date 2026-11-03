@@ -26,6 +26,34 @@ const mainKeyboard = new Keyboard()
   .resized()
   .persistent();
 
+function userLabel(context: { from?: { id: number; username?: string; first_name?: string } }): string {
+  const user = context.from;
+  if (!user) return "unknown user";
+  return `${user.id} (@${user.username ?? "no username"}, ${user.first_name ?? "no name"})`;
+}
+
+async function notifyAdmin(message: string): Promise<void> {
+  try {
+    await bot.api.sendMessage(config.adminUserId, message);
+  } catch (error) {
+    console.error("Admin notification failed:", error);
+  }
+}
+
+bot.use(async (context, next) => {
+  if (context.from && String(context.from.id) !== config.adminUserId) {
+    const action = context.callbackQuery?.data
+      ? `clicked ${context.callbackQuery.data}`
+      : context.message?.text
+        ? `sent: ${context.message.text.slice(0, 200)}`
+        : context.chatJoinRequest
+          ? "requested to join the group"
+          : null;
+    if (action) await notifyAdmin(`[Activity] ${userLabel(context)} ${action}`);
+  }
+  await next();
+});
+
 bot.command(["start", "buy"], async (context) => {
   await context.reply(
     `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.`,
@@ -76,6 +104,7 @@ bot.callbackQuery("preview", async (context) => {
     `Your ${config.previewMinutes}-minute preview is ready. You will be removed automatically when it ends.`,
     { reply_markup: new InlineKeyboard().url("Join preview", invite.invite_link) },
   );
+  await notifyAdmin(`[Preview] ${userLabel(context)} started a ${config.previewMinutes}-minute preview.`);
 });
 
 bot.callbackQuery("contact_admin", async (context) => {
@@ -161,10 +190,12 @@ bot.on("message:text", async (context) => {
       `No matching USDT transfer of at least ${config.priceUsdt} to the payment address was found. ` +
         "Check the transaction hash and network (BEP20).",
     );
+    await notifyAdmin(`[Payment] ${userLabel(context)} submitted an unverified tx ${txHash}.`);
     return;
   }
   if (!(await recordWalletPayment(txHash, userId))) {
     await context.reply("This transaction has already been used.");
+    await notifyAdmin(`[Payment] ${userLabel(context)} tried to reuse tx ${txHash}.`);
     return;
   }
 
@@ -183,9 +214,11 @@ bot.on("chat_join_request", async (context) => {
   const userId = context.chatJoinRequest.from.id;
   if (await activeMembership(userId)) {
     await context.approveChatJoinRequest(userId);
+    await notifyAdmin(`[Join] ${userLabel(context)} was approved automatically.`);
     return;
   }
   await recordJoinRequest(userId);
+  await notifyAdmin(`[Join] ${userLabel(context)} requested to join without active access.`);
   await context.api.sendMessage(
     userId,
     `Your join request is pending. Pay ${config.priceUsdt} USDT for ${config.subscriptionDays} days of access, then request again.`,
@@ -213,6 +246,7 @@ async function removeExpiredPreviews(): Promise<void> {
       `Your preview has ended. Buy access for ${config.priceUsdt} USDT to rejoin.`,
       { reply_markup: new InlineKeyboard().text("Buy access", "buy_access") },
     );
+    await notifyAdmin(`[Preview] User ${userId} was removed after the preview ended.`);
   }
 }
 
