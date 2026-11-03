@@ -14,12 +14,52 @@ import {
 
 const bot = new Bot(config.botToken);
 const txHashPattern = /^0x[0-9a-fA-F]{64}$/;
+const awaitingAdminMessage = new Set<number>();
 
 bot.command(["start", "buy"], async (context) => {
   await context.reply(
     `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.`,
-    { reply_markup: new InlineKeyboard().text("Buy access", "buy_access") },
+    {
+      reply_markup: new InlineKeyboard()
+        .text("Buy access", "buy_access")
+        .row()
+        .text("Contact admin", "contact_admin"),
+    },
   );
+});
+
+bot.callbackQuery("contact_admin", async (context) => {
+  await context.answerCallbackQuery();
+  awaitingAdminMessage.add(context.from!.id);
+  await context.reply("Send your message for the admin. Use /cancel to stop.");
+});
+
+bot.command("cancel", async (context) => {
+  if (awaitingAdminMessage.delete(context.from!.id)) {
+    await context.reply("Message cancelled.");
+  }
+});
+
+bot.command("reply", async (context) => {
+  if (String(context.from!.id) !== config.adminUserId) return;
+  const match = context.match.match(/^(\d+)\s+([\s\S]+)$/);
+  if (!match) {
+    await context.reply("Usage: /reply <user_id> <message>");
+    return;
+  }
+  await bot.api.sendMessage(match[1], `Admin reply:\n\n${match[2]}`);
+  await context.reply("Reply sent.");
+});
+
+bot.callbackQuery(/^reply_(\d+)$/, async (context) => {
+  if (String(context.from.id) !== config.adminUserId) {
+    await context.answerCallbackQuery({ text: "Not allowed." });
+    return;
+  }
+  const userId = Number(context.match[1]);
+  awaitingAdminMessage.add(userId);
+  await context.answerCallbackQuery();
+  await context.reply(`Send your reply to user ${userId}. Use /cancel to stop.`);
 });
 
 bot.callbackQuery("buy_access", async (context) => {
@@ -34,9 +74,26 @@ bot.callbackQuery("buy_access", async (context) => {
 });
 
 bot.on("message:text", async (context) => {
-  const txHash = context.message.text.trim();
-  if (!txHashPattern.test(txHash)) return;
+  const text = context.message.text.trim();
   const userId = context.from.id;
+
+  if (awaitingAdminMessage.delete(userId)) {
+    if (String(userId) === config.adminUserId) {
+      await bot.api.sendMessage(userId, `Admin reply:\n\n${text}`);
+      await context.reply("Reply sent.");
+    } else {
+      await bot.api.sendMessage(
+        config.adminUserId,
+        `Message from user ${userId} (@${context.from.username ?? "no username"}):\n\n${text}`,
+        { reply_markup: new InlineKeyboard().text("Reply", `reply_${userId}`) },
+      );
+      await context.reply("Your message was sent to the admin.");
+    }
+    return;
+  }
+
+  if (!txHashPattern.test(text)) return;
+  const txHash = text;
 
   await context.reply("Checking the transaction on BNB Smart Chain...");
   let paid: boolean;

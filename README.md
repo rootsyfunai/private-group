@@ -8,6 +8,11 @@ Users scan the Binance QR, send USDT to the configured wallet, and reply with th
 transaction hash. The bot verifies the transfer through BscScan, then approves
 their join request. Members are removed when access expires.
 
+Users can also tap **Contact admin** to send a message through the bot. The admin
+receives it with a **Reply** button; replies are delivered by the bot without
+revealing the admin's Telegram account. The admin can also use
+`/reply <user_id> <message>`.
+
 ## Setup
 
 1. Create a Telegram bot with [@BotFather](https://t.me/BotFather).
