@@ -1,4 +1,4 @@
-import { Bot, InlineKeyboard, InputFile, Keyboard } from "grammy";
+import { Bot, InlineKeyboard, InputFile } from "grammy";
 import { createServer } from "node:http";
 import { config } from "./config.js";
 import { verifyUsdtPayment } from "./bsc.js";
@@ -22,17 +22,6 @@ const bot = new Bot(config.botToken);
 const txHashPattern = /^0x[0-9a-fA-F]{64}$/;
 const awaitingAdminMessage = new Set<number>();
 const awaitingVideo = new Set<number>();
-
-const mainKeyboard = new Keyboard()
-  .text("Buy access")
-  .text("Free preview")
-  .row()
-  .text("Refer & get free days")
-  .row()
-  .text("Send videos")
-  .text("Contact admin")
-  .resized()
-  .persistent();
 
 function userLabel(context: { from?: { id: number; username?: string; first_name?: string } }): string {
   const user = context.from;
@@ -97,7 +86,6 @@ bot.command("start", async (context) => {
         .text("Contact admin", "contact_admin"),
     },
   );
-  await context.reply("Choose an option below.", { reply_markup: mainKeyboard });
 });
 
 bot.callbackQuery("send_videos", async (context) => {
@@ -161,42 +149,6 @@ bot.command("buy", async (context) => {
         .text("Contact admin", "contact_admin"),
     },
   );
-});
-
-bot.hears("Buy access", async (context) => {
-  await context.reply("Tap the button below to get the payment details.", {
-    reply_markup: new InlineKeyboard().text("Buy access", "buy_access"),
-  });
-});
-
-bot.hears("Free preview", async (context) => {
-  await context.reply("Tap the button below to start your preview.", {
-    reply_markup: new InlineKeyboard().text("Free preview", "preview"),
-  });
-});
-
-bot.hears("Refer & get free days", async (context) => {
-  const userId = context.from!.id;
-  const botInfo = await bot.api.getMe();
-  const link = `https://t.me/${botInfo.username}?start=ref_${userId}`;
-  const count = await referralCount(userId);
-  await context.reply(
-    `Share this link and earn ${config.referralRewardDays} free days when your friend pays.\n\n` +
-      `Your link:\n${link}\n\n` +
-      `Successful referrals: ${count}`,
-  );
-});
-
-bot.hears("Send videos", async (context) => {
-  awaitingVideo.add(context.from!.id);
-  await context.reply(
-    "Send the video you want to share. You can add a caption with any notes. Use /cancel to stop.",
-  );
-});
-
-bot.hears("Contact admin", async (context) => {
-  awaitingAdminMessage.add(context.from!.id);
-  await context.reply("Send your message for the admin. Use /cancel to stop.");
 });
 
 bot.callbackQuery("preview", async (context) => {
