@@ -96,13 +96,10 @@ bot.on("message:video", async (context) => {
   const userId = context.from.id;
   if (!awaitingVideo.delete(userId)) return;
   try {
-    await bot.api.copyMessage(
+    await bot.api.forwardMessage(config.adminUserId, context.chat.id, context.message.message_id);
+    await bot.api.sendMessage(
       config.adminUserId,
-      context.chat.id,
-      context.message.message_id,
-      {
-        caption: `Video from ${userLabel(context)}${context.message.caption ? `:\n\n${context.message.caption}` : ""}`,
-      },
+      `Video from ${userLabel(context)}${context.message.caption ? `:\n\n${context.message.caption}` : ""}`,
     );
     await context.reply("Your video was sent to the admin.");
   } catch (error) {
