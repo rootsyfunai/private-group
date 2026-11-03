@@ -85,8 +85,7 @@ bot.command("start", async (context) => {
   const referralLink = `https://t.me/${botInfo.username}?start=ref_${userId}`;
   await context.reply(
     `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.\n\n` +
-      `Share your referral link and earn ${config.referralRewardDays} free days when your friend pays:\n${referralLink}\n\n` +
-      "Use the buttons below.",
+      `Share your referral link and earn ${config.referralRewardDays} free days when your friend pays:\n${referralLink}`,
     {
       reply_markup: new InlineKeyboard()
         .text("Buy access", "buy_access")
@@ -162,7 +161,6 @@ bot.command("buy", async (context) => {
         .text("Contact admin", "contact_admin"),
     },
   );
-  await context.reply("Choose an option:", { reply_markup: mainKeyboard });
 });
 
 bot.hears("Buy access", async (context) => {
