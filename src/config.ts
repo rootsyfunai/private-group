@@ -14,6 +14,7 @@ export const config = {
   adminUserId: required("ADMIN_USER_ID"),
   priceUsdt: process.env.SUBSCRIPTION_PRICE_USDT ?? "10",
   subscriptionDays: Number(process.env.SUBSCRIPTION_DAYS ?? "30"),
+  previewMinutes: Number(process.env.PREVIEW_MINUTES ?? "3"),
   port: Number(process.env.PORT ?? "3000"),
   walletAddress: required("USDT_WALLET_ADDRESS"),
   qrImagePath: process.env.QR_IMAGE_PATH ?? "qrcode.jpg",
@@ -21,6 +22,10 @@ export const config = {
 
 if (!Number.isInteger(config.subscriptionDays) || config.subscriptionDays <= 0) {
   throw new Error("SUBSCRIPTION_DAYS must be a positive integer");
+}
+
+if (!Number.isInteger(config.previewMinutes) || config.previewMinutes <= 0) {
+  throw new Error("PREVIEW_MINUTES must be a positive integer");
 }
 
 if (!/^0x[0-9a-fA-F]{40}$/.test(config.walletAddress)) {

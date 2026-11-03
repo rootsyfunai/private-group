@@ -19,6 +19,12 @@ export async function initializeDatabase(): Promise<void> {
       telegram_user_id BIGINT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS previews (
+      telegram_user_id BIGINT PRIMARY KEY,
+      started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL,
+      removed BOOLEAN NOT NULL DEFAULT FALSE
+    );
   `);
 }
 
@@ -41,6 +47,30 @@ export async function recordWalletPayment(txHash: string, userId: number): Promi
     [txHash.toLowerCase(), userId],
   );
   return result.rowCount === 1;
+}
+
+export async function startPreview(userId: number, minutes: number): Promise<boolean> {
+  const result = await pool.query(
+    `INSERT INTO previews (telegram_user_id, expires_at)
+     VALUES ($1, NOW() + ($2 * INTERVAL '1 minute'))
+     ON CONFLICT (telegram_user_id) DO UPDATE
+       SET started_at = NOW(),
+           expires_at = NOW() + ($2 * INTERVAL '1 minute'),
+           removed = FALSE
+     WHERE previews.started_at <= NOW() - INTERVAL '1 day'
+     RETURNING telegram_user_id`,
+    [userId, minutes],
+  );
+  return result.rowCount === 1;
+}
+
+export async function expiredPreviews(): Promise<number[]> {
+  const result = await pool.query<{ telegram_user_id: string }>(
+    `UPDATE previews SET removed = TRUE
+     WHERE removed = FALSE AND expires_at <= NOW()
+     RETURNING telegram_user_id`,
+  );
+  return result.rows.map((row) => Number(row.telegram_user_id));
 }
 
 export async function activeMembership(userId: number): Promise<boolean> {

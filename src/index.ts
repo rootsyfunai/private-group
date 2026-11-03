@@ -5,10 +5,12 @@ import { verifyUsdtPayment } from "./bsc.js";
 import {
   activeMembership,
   expiredMemberships,
+  expiredPreviews,
   initializeDatabase,
   pool,
   recordJoinRequest,
   recordWalletPayment,
+  startPreview,
   upsertMembership,
 } from "./db.js";
 
@@ -23,8 +25,30 @@ bot.command(["start", "buy"], async (context) => {
       reply_markup: new InlineKeyboard()
         .text("Buy access", "buy_access")
         .row()
+        .text("Free preview", "preview")
         .text("Contact admin", "contact_admin"),
     },
+  );
+});
+
+bot.callbackQuery("preview", async (context) => {
+  await context.answerCallbackQuery();
+  const userId = context.from!.id;
+  if (await activeMembership(userId)) {
+    await context.reply("You already have active access.");
+    return;
+  }
+  if (!(await startPreview(userId, config.previewMinutes))) {
+    await context.reply("You can only use the free preview once every 24 hours.");
+    return;
+  }
+  const invite = await bot.api.createChatInviteLink(config.groupId, {
+    member_limit: 1,
+    expire_date: Math.floor(Date.now() / 1000) + 600,
+  });
+  await context.reply(
+    `Your ${config.previewMinutes}-minute preview is ready. You will be removed automatically when it ends.`,
+    { reply_markup: new InlineKeyboard().url("Join preview", invite.invite_link) },
   );
 });
 
@@ -143,17 +167,33 @@ bot.on("chat_join_request", async (context) => {
   );
 });
 
+async function removeMember(userId: number): Promise<void> {
+  await bot.api.banChatMember(config.groupId, userId);
+  await bot.api.unbanChatMember(config.groupId, userId, { only_if_banned: true });
+}
+
 async function removeExpiredMembers(): Promise<void> {
   for (const userId of await expiredMemberships()) {
-    await bot.api.banChatMember(config.groupId, userId);
-    await bot.api.unbanChatMember(config.groupId, userId, { only_if_banned: true });
+    await removeMember(userId);
     await bot.api.sendMessage(config.adminUserId, `Access expired and member ${userId} was removed.`);
+  }
+}
+
+async function removeExpiredPreviews(): Promise<void> {
+  for (const userId of await expiredPreviews()) {
+    await removeMember(userId);
+    await bot.api.sendMessage(
+      userId,
+      `Your preview has ended. Buy access for ${config.priceUsdt} USDT to rejoin.`,
+      { reply_markup: new InlineKeyboard().text("Buy access", "buy_access") },
+    );
   }
 }
 
 async function main(): Promise<void> {
   await initializeDatabase();
   setInterval(() => removeExpiredMembers().catch(console.error), 60_000);
+  setInterval(() => removeExpiredPreviews().catch(console.error), 30_000);
   await bot.start();
 }
 

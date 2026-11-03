@@ -9,6 +9,11 @@ transaction hash. The bot verifies the transfer directly on BNB Smart Chain
 through public RPC endpoints, then approves their join request. Members are
 removed when access expires.
 
+Users can tap **Free preview** for a one-time 3-minute preview. A user can start a
+new preview only after 24 hours have passed since their last one. Preview expiry
+is stored in PostgreSQL, so restarts do not leave preview members in the group.
+Set `PREVIEW_MINUTES` to change the duration.
+
 Users can also tap **Contact admin** to send a message through the bot. The admin
 receives it with a **Reply** button; replies are delivered by the bot without
 revealing the admin's Telegram account. The admin can also use
