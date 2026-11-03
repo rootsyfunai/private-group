@@ -10,6 +10,7 @@ import {
   pool,
   recordInvoice,
   recordJoinRequest,
+  recordStarsPayment,
   upsertMembership,
 } from "./db.js";
 
@@ -17,18 +18,54 @@ const bot = new Bot(config.botToken);
 
 bot.command(["start", "buy"], async (context) => {
   await context.reply(
-    `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.`,
-    { reply_markup: new InlineKeyboard().text("Buy access", "buy_access") },
+    `Private group access costs ${config.priceUsdt} USDT or ${config.priceStars} Stars for ${config.subscriptionDays} days.`,
+    {
+      reply_markup: new InlineKeyboard()
+        .text("Pay with USDT", "buy_crypto")
+        .text("Pay with Stars", "buy_stars"),
+    },
   );
 });
 
-bot.callbackQuery("buy_access", async (context) => {
+bot.callbackQuery("buy_crypto", async (context) => {
   await context.answerCallbackQuery();
   const invoice = await createInvoice(context.from.id);
   await recordInvoice(String(invoice.invoice_id), context.from.id);
   await context.reply("Your invoice is ready. After payment, request to join the private group.", {
     reply_markup: new InlineKeyboard().url("Pay with CryptoBot", invoice.pay_url),
   });
+});
+
+bot.callbackQuery("buy_stars", async (context) => {
+  await context.answerCallbackQuery();
+  await context.replyWithInvoice(
+    "Private group access",
+    `${config.subscriptionDays} days of access to the private group.`,
+    `stars:${context.from.id}`,
+    "XTR",
+    [{ label: `${config.subscriptionDays} days access`, amount: config.priceStars }],
+    { provider_token: "" },
+  );
+});
+
+bot.on("pre_checkout_query", async (context) => {
+  const payload = context.preCheckoutQuery.invoice_payload;
+  const valid = payload === `stars:${context.preCheckoutQuery.from.id}`;
+  await context.answerPreCheckoutQuery(valid, valid ? undefined : { error_message: "Invalid order." });
+});
+
+bot.on("message:successful_payment", async (context) => {
+  const payment = context.message.successful_payment;
+  const userId = context.from.id;
+  if (!(await recordStarsPayment(payment.telegram_payment_charge_id, userId))) return;
+  const expiresAt = await upsertMembership(userId, config.subscriptionDays);
+  await context.reply(
+    `Payment confirmed. Your access expires ${expiresAt.toISOString()}. Request to join the private group now.`,
+  );
+  await bot.api.sendMessage(
+    config.adminUserId,
+    `New Stars purchase: user ${userId}, ${payment.total_amount} Stars, expires ${expiresAt.toISOString()}.`,
+  );
 });
 
 bot.on("chat_join_request", async (context) => {
