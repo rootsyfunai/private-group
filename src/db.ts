@@ -25,6 +25,12 @@ export async function initializeDatabase(): Promise<void> {
       expires_at TIMESTAMPTZ NOT NULL,
       removed BOOLEAN NOT NULL DEFAULT FALSE
     );
+    CREATE TABLE IF NOT EXISTS referrals (
+      referred_user_id BIGINT PRIMARY KEY,
+      referrer_user_id BIGINT NOT NULL,
+      rewarded BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
 }
 
@@ -71,6 +77,33 @@ export async function expiredPreviews(): Promise<number[]> {
      RETURNING telegram_user_id`,
   );
   return result.rows.map((row) => Number(row.telegram_user_id));
+}
+
+export async function recordReferral(referredUserId: number, referrerUserId: number): Promise<boolean> {
+  if (referredUserId === referrerUserId) return false;
+  const result = await pool.query(
+    "INSERT INTO referrals (referred_user_id, referrer_user_id) VALUES ($1, $2) ON CONFLICT (referred_user_id) DO NOTHING",
+    [referredUserId, referrerUserId],
+  );
+  return result.rowCount === 1;
+}
+
+export async function claimReferralReward(referredUserId: number): Promise<number | null> {
+  const result = await pool.query<{ referrer_user_id: string }>(
+    `UPDATE referrals SET rewarded = TRUE
+     WHERE referred_user_id = $1 AND rewarded = FALSE
+     RETURNING referrer_user_id`,
+    [referredUserId],
+  );
+  return result.rows[0] ? Number(result.rows[0].referrer_user_id) : null;
+}
+
+export async function referralCount(userId: number): Promise<number> {
+  const result = await pool.query<{ count: string }>(
+    "SELECT COUNT(*)::text AS count FROM referrals WHERE referrer_user_id = $1 AND rewarded = TRUE",
+    [userId],
+  );
+  return Number(result.rows[0].count);
 }
 
 export async function activeMembership(userId: number): Promise<boolean> {

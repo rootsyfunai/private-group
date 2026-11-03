@@ -14,6 +14,19 @@ new preview only after 24 hours have passed since their last one. Preview expiry
 is stored in PostgreSQL, so restarts do not leave preview members in the group.
 Set `PREVIEW_MINUTES` to change the duration.
 
+## Referrals
+
+Users can tap **Refer & earn** or use `/refer` to get a personal invite link:
+
+```text
+https://t.me/<bot_username>?start=ref_<user_id>
+```
+
+When a referred user's payment is verified, the referrer earns
+`REFERRAL_REWARD_DAYS` free days (default 2). Rewards are only granted if the
+referrer has active access at that moment. Each referred user can be rewarded
+once, and self-referrals are ignored.
+
 The admin receives a direct message for each user action: button clicks, text
 messages, preview starts, payment attempts, join requests, and removals. Admin
 activity is not logged back to the admin.

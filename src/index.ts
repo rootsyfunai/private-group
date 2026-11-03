@@ -4,12 +4,15 @@ import { config } from "./config.js";
 import { verifyUsdtPayment } from "./bsc.js";
 import {
   activeMembership,
+  claimReferralReward,
   expiredMemberships,
   expiredPreviews,
   initializeDatabase,
   pool,
   recordJoinRequest,
+  recordReferral,
   recordWalletPayment,
+  referralCount,
   startPreview,
   upsertMembership,
 } from "./db.js";
@@ -22,6 +25,7 @@ const mainKeyboard = new Keyboard()
   .text("Buy access")
   .text("Free preview")
   .row()
+  .text("Refer & earn")
   .text("Contact admin")
   .resized()
   .persistent();
@@ -54,7 +58,40 @@ bot.use(async (context, next) => {
   await next();
 });
 
-bot.command(["start", "buy"], async (context) => {
+bot.command("start", async (context) => {
+  const payload = context.match.trim();
+  if (payload.startsWith("ref_")) {
+    const referrerId = Number(payload.slice(4));
+    if (Number.isInteger(referrerId) && (await recordReferral(context.from!.id, referrerId))) {
+      await notifyAdmin(`[Referral] ${userLabel(context)} was referred by ${referrerId}.`);
+    }
+  }
+  await context.reply(
+    `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.`,
+    {
+      reply_markup: new InlineKeyboard()
+        .text("Buy access", "buy_access")
+        .row()
+        .text("Free preview", "preview")
+        .text("Contact admin", "contact_admin"),
+    },
+  );
+  await context.reply("Use the buttons below.", { reply_markup: mainKeyboard });
+});
+
+bot.command("refer", async (context) => {
+  const userId = context.from!.id;
+  const botInfo = await bot.api.getMe();
+  const link = `https://t.me/${botInfo.username}?start=ref_${userId}`;
+  const count = await referralCount(userId);
+  await context.reply(
+    `Invite friends and earn ${config.referralRewardDays} free days per successful referral.\n\n` +
+      `Your link:\n${link}\n\n` +
+      `Successful referrals: ${count}`,
+  );
+});
+
+bot.command("buy", async (context) => {
   await context.reply(
     `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.`,
     {
@@ -78,6 +115,18 @@ bot.hears("Free preview", async (context) => {
   await context.reply("Tap the button below to start your preview.", {
     reply_markup: new InlineKeyboard().text("Free preview", "preview"),
   });
+});
+
+bot.hears("Refer & earn", async (context) => {
+  const userId = context.from!.id;
+  const botInfo = await bot.api.getMe();
+  const link = `https://t.me/${botInfo.username}?start=ref_${userId}`;
+  const count = await referralCount(userId);
+  await context.reply(
+    `Invite friends and earn ${config.referralRewardDays} free days per successful referral.\n\n` +
+      `Your link:\n${link}\n\n` +
+      `Successful referrals: ${count}`,
+  );
 });
 
 bot.hears("Contact admin", async (context) => {
@@ -205,9 +254,23 @@ bot.on("message:text", async (context) => {
   await context.reply(
     `Payment confirmed. Your access expires ${expiresAt.toISOString()}. Request to join the private group now.`,
   );
-  await bot.api.sendMessage(
-    config.adminUserId,
+  await notifyAdmin(
     `New purchase: user ${userId}, ${config.priceUsdt} USDT, tx ${txHash}, expires ${expiresAt.toISOString()}.`,
+  );
+
+  const referrerId = await claimReferralReward(userId);
+  if (!referrerId) return;
+  if (!(await activeMembership(referrerId))) {
+    await notifyAdmin(`[Referral] Referrer ${referrerId} has no active access; reward skipped.`);
+    return;
+  }
+  const referrerExpiry = await upsertMembership(referrerId, config.referralRewardDays);
+  await bot.api.sendMessage(
+    referrerId,
+    `You earned ${config.referralRewardDays} free days from a referral. Your access now expires ${referrerExpiry.toISOString()}.`,
+  );
+  await notifyAdmin(
+    `[Referral] User ${referrerId} earned ${config.referralRewardDays} days from user ${userId}.`,
   );
 });
 
