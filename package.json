@@ -8,15 +8,15 @@
     "build": "tsc",
     "start": "node dist/index.js"
   },
-  "dependencies": {
-    "dotenv": "^16.4.7",
-    "grammy": "^1.35.0",
-    "pg": "^8.13.1"
-  },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@types/pg": "^8.11.10",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.9",
+    "grammy": "^1.46.0",
+    "pg": "^8.23.1"
   }
 }

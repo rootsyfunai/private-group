@@ -1,70 +1,71 @@
-import { Bot, InlineKeyboard } from "grammy";
+import { Bot, InlineKeyboard, InputFile } from "grammy";
 import { createServer } from "node:http";
 import { config } from "./config.js";
-import { createInvoice, paidInvoices } from "./crypto-pay.js";
+import { verifyUsdtPayment } from "./bscscan.js";
 import {
   activeMembership,
   expiredMemberships,
   initializeDatabase,
-  markPaid,
   pool,
-  recordInvoice,
   recordJoinRequest,
-  recordStarsPayment,
+  recordWalletPayment,
   upsertMembership,
 } from "./db.js";
 
 const bot = new Bot(config.botToken);
+const txHashPattern = /^0x[0-9a-fA-F]{64}$/;
 
 bot.command(["start", "buy"], async (context) => {
   await context.reply(
-    `Private group access costs ${config.priceUsdt} USDT or ${config.priceStars} Stars for ${config.subscriptionDays} days.`,
-    {
-      reply_markup: new InlineKeyboard()
-        .text("Pay with USDT", "buy_crypto")
-        .text("Pay with Stars", "buy_stars"),
-    },
+    `Private group access costs ${config.priceUsdt} USDT for ${config.subscriptionDays} days.`,
+    { reply_markup: new InlineKeyboard().text("Buy access", "buy_access") },
   );
 });
 
-bot.callbackQuery("buy_crypto", async (context) => {
+bot.callbackQuery("buy_access", async (context) => {
   await context.answerCallbackQuery();
-  const invoice = await createInvoice(context.from.id);
-  await recordInvoice(String(invoice.invoice_id), context.from.id);
-  await context.reply("Your invoice is ready. After payment, request to join the private group.", {
-    reply_markup: new InlineKeyboard().url("Pay with CryptoBot", invoice.pay_url),
+  await context.replyWithPhoto(new InputFile(config.qrImagePath), {
+    caption:
+      `Send exactly ${config.priceUsdt} USDT on BNB Smart Chain (BEP20) to:\n` +
+      `\`${config.walletAddress}\`\n\n` +
+      "After sending, reply with the transaction hash (0x...).",
+    parse_mode: "Markdown",
   });
 });
 
-bot.callbackQuery("buy_stars", async (context) => {
-  await context.answerCallbackQuery();
-  await context.replyWithInvoice(
-    "Private group access",
-    `${config.subscriptionDays} days of access to the private group.`,
-    `stars:${context.from.id}`,
-    "XTR",
-    [{ label: `${config.subscriptionDays} days access`, amount: config.priceStars }],
-    { provider_token: "" },
-  );
-});
-
-bot.on("pre_checkout_query", async (context) => {
-  const payload = context.preCheckoutQuery.invoice_payload;
-  const valid = payload === `stars:${context.preCheckoutQuery.from.id}`;
-  await context.answerPreCheckoutQuery(valid, valid ? undefined : { error_message: "Invalid order." });
-});
-
-bot.on("message:successful_payment", async (context) => {
-  const payment = context.message.successful_payment;
+bot.on("message:text", async (context) => {
+  const txHash = context.message.text.trim();
+  if (!txHashPattern.test(txHash)) return;
   const userId = context.from.id;
-  if (!(await recordStarsPayment(payment.telegram_payment_charge_id, userId))) return;
+
+  await context.reply("Checking the transaction on BNB Smart Chain...");
+  let paid: boolean;
+  try {
+    paid = await verifyUsdtPayment(txHash, config.priceUsdt);
+  } catch (error) {
+    console.error("Payment verification failed:", error);
+    await context.reply("Could not verify the transaction right now. Please try again shortly.");
+    return;
+  }
+  if (!paid) {
+    await context.reply(
+      `No matching USDT transfer of at least ${config.priceUsdt} to the payment address was found. ` +
+        "Check the transaction hash and network (BEP20).",
+    );
+    return;
+  }
+  if (!(await recordWalletPayment(txHash, userId))) {
+    await context.reply("This transaction has already been used.");
+    return;
+  }
+
   const expiresAt = await upsertMembership(userId, config.subscriptionDays);
   await context.reply(
     `Payment confirmed. Your access expires ${expiresAt.toISOString()}. Request to join the private group now.`,
   );
   await bot.api.sendMessage(
     config.adminUserId,
-    `New Stars purchase: user ${userId}, ${payment.total_amount} Stars, expires ${expiresAt.toISOString()}.`,
+    `New purchase: user ${userId}, ${config.priceUsdt} USDT, tx ${txHash}, expires ${expiresAt.toISOString()}.`,
   );
 });
 
@@ -83,22 +84,6 @@ bot.on("chat_join_request", async (context) => {
   );
 });
 
-async function processPaidInvoices(): Promise<void> {
-  for (const invoice of await paidInvoices()) {
-    const userId = await markPaid(String(invoice.invoice_id));
-    if (!userId) continue;
-    const expiresAt = await upsertMembership(userId, config.subscriptionDays);
-    await bot.api.sendMessage(
-      userId,
-      `Payment confirmed. Your access expires ${expiresAt.toISOString()}. Request to join the private group now.`,
-    );
-    await bot.api.sendMessage(
-      config.adminUserId,
-      `New purchase: user ${userId}, ${config.priceUsdt} USDT, expires ${expiresAt.toISOString()}.`,
-    );
-  }
-}
-
 async function removeExpiredMembers(): Promise<void> {
   for (const userId of await expiredMemberships()) {
     await bot.api.banChatMember(config.groupId, userId);
@@ -109,7 +94,6 @@ async function removeExpiredMembers(): Promise<void> {
 
 async function main(): Promise<void> {
   await initializeDatabase();
-  setInterval(() => processPaidInvoices().catch(console.error), 30_000);
   setInterval(() => removeExpiredMembers().catch(console.error), 60_000);
   await bot.start();
 }

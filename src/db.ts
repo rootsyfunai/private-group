@@ -21,8 +21,8 @@ export async function initializeDatabase(): Promise<void> {
       telegram_user_id BIGINT PRIMARY KEY,
       requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
-    CREATE TABLE IF NOT EXISTS stars_payments (
-      charge_id TEXT PRIMARY KEY,
+    CREATE TABLE IF NOT EXISTS wallet_payments (
+      tx_hash TEXT PRIMARY KEY,
       telegram_user_id BIGINT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -59,10 +59,10 @@ export async function upsertMembership(userId: number, days: number): Promise<Da
   return result.rows[0].expires_at;
 }
 
-export async function recordStarsPayment(chargeId: string, userId: number): Promise<boolean> {
+export async function recordWalletPayment(txHash: string, userId: number): Promise<boolean> {
   const result = await pool.query(
-    "INSERT INTO stars_payments (charge_id, telegram_user_id) VALUES ($1, $2) ON CONFLICT (charge_id) DO NOTHING",
-    [chargeId, userId],
+    "INSERT INTO wallet_payments (tx_hash, telegram_user_id) VALUES ($1, $2) ON CONFLICT (tx_hash) DO NOTHING",
+    [txHash.toLowerCase(), userId],
   );
   return result.rowCount === 1;
 }
